@@ -11,8 +11,7 @@ JAVA_LANGUAGE = Language(lang_obj)
 
 parser = Parser(JAVA_LANGUAGE)
 
-# テスト用のコード（元々のファイルにあったサンプルコード）
-
+# コード読み込み
 code = CODE
 
 def main():
@@ -28,18 +27,19 @@ def main():
 
 	chunks = []
 
+	def get_node_name(node):
+		for c in node.children:
+			if c.type == 'identifier':
+				return c.text.decode('utf8')
+		return None
+
 	def collect_chunks(node, parent_name=None):
 		"""指定ノード以下を再帰的に探索し、メソッド宣言を chunks に追加する。"""
 		if node.type == 'class_declaration':
 			parent_name = get_node_name(node)
 		if node.type == 'method_declaration':
-			try:
-				chunk_code = codedata[node.start_byte:node.end_byte].decode('utf8')
-			except Exception:
-				chunk_code = ''
 			chunks.append({
-				'code': chunk_code,
-				'text': node.text.decode('utf8'),
+				'code': node.text.decode('utf8'),
 				'parent': parent_name,
 				'name': get_node_name(node),
 				'type': node.type,
@@ -50,23 +50,11 @@ def main():
 		for c in node.children:
 			collect_chunks(c, parent_name)
 	
-	def get_node_name(node):
-		for c in node.children:
-			if c.type == 'identifier':
-				return c.text.decode('utf8')
-		return None
-
 	collect_chunks(root_node)
 
-	created_files = []
-	for i, chunk in enumerate(chunks):
-		filename = f'chunk_{i+1}_{chunk["type"]}_lines_{chunk["start_line"]+1}_to_{chunk["end_line"]+1}.java'
-		with open(filename, 'w', encoding='utf8') as f:
-			f.write(chunk['code'])
-		created_files.append(filename)
-
-	# 最後に簡潔なサマリを出力
-	print(f"処理完了: {len(created_files)} 個のチャンクを保存し、それぞれに説明ファイルを生成しました。")
+	# 取得したチャンクのcodeをRecursiveTextSplitterを利用して分割する
+	
+	# 分割した各チャンクのコードをLangchainに渡し、LLMで解説文を作成する
 
 
 if __name__ == '__main__':
